@@ -311,6 +311,35 @@ async def cmd_start_message(message: Message, state: FSMContext):
     await cmd_start(state, message.from_user, message.answer)
 
 
+# Команда /status - Отображение информации о системе
+@dp.message(Command("status"))
+async def cmd_status(message: types.Message, state: FSMContext):
+    await state.clear()
+    await updating_base_properties(state=state, user=message.from_user, pool=dp["db_pool"])
+
+    db_status = None
+    if await get_fsm_key(state, 'check_status') and await get_fsm_key(state, 'status'):
+        db_status = "Подключено"
+        try:
+            await safe_execute(dp["db_pool"], "SELECT 1;")
+        except Exception:
+            db_status = "Ошибка"
+        await message.answer("Вы являйтесь системным пользователем!")
+        await message.answer(
+            f"Инициализирована проверка работы Telegram-бота!\n"
+            f"Статус: Работает\n"
+            f"Бот запущен: {datetime_now_date} {datetime_now_time}\n"
+            f"Статус подключения к базе данных: {db_status}"
+        )
+    else:
+        await message.answer('У вас нет доступа к этой функции.')
+    logging.info(f"Функция '{inspect.currentframe().f_code.co_name}' - (ID пользователя: {message.from_user.id}) "
+                 f"(Пользователь: {message.from_user.full_name}) (Username: @{message.from_user.username}) "
+                 f"(Статус: Работает) (Бот запущен: {datetime_now_date} {datetime_now_time}) (Статус подключения к базе данных: {db_status})\n"
+                 f"Data: {await state.get_data()}\n"
+                 f"Текущее состояние: {await state.get_state()}")
+
+
 # Ответ на любые сообщения (Когда FSM состояние: None)
 @dp.message(StateFilter(None))
 async def other_message(message: Message, state: FSMContext):
@@ -771,35 +800,6 @@ async def handle_convenient_time(callback_query: CallbackQuery, state: FSMContex
 
 
 # Блок для системных пользователей -------------------------------------------------------------------------------------
-
-
-# Команда /status - Отображение информации о системе
-@dp.message(Command("status"))
-async def cmd_status(message: types.Message, state: FSMContext):
-    await state.clear()
-    await updating_base_properties(state=state, user=message.from_user, pool=dp["db_pool"])
-
-    db_status = None
-    if await get_fsm_key(state, 'check_status') and await get_fsm_key(state, 'status'):
-        db_status = "Подключено"
-        try:
-            await safe_execute(dp["db_pool"], "SELECT 1;")
-        except Exception:
-            db_status = "Ошибка"
-        await message.answer("Вы являйтесь системным пользователем!")
-        await message.answer(
-            f"Инициализирована проверка работы Telegram-бота!\n"
-            f"Статус: Работает\n"
-            f"Бот запущен: {datetime_now_date} {datetime_now_time}\n"
-            f"Статус подключения к базе данных: {db_status}"
-        )
-    else:
-        await message.answer('У вас нет доступа к этой функции.')
-    logging.info(f"Функция '{inspect.currentframe().f_code.co_name}' - (ID пользователя: {message.from_user.id}) "
-                 f"(Пользователь: {message.from_user.full_name}) (Username: @{message.from_user.username}) "
-                 f"(Статус: Работает) (Бот запущен: {datetime_now_date} {datetime_now_time}) (Статус подключения к базе данных: {db_status})\n"
-                 f"Data: {await state.get_data()}\n"
-                 f"Текущее состояние: {await state.get_state()}")
 
 
 # Управление заявками - Старт
